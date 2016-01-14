@@ -1,3 +1,5 @@
+#Freke is de beste van de wereld
+
 #!/usr/bin/env python
 """
 EmptyBot - a skeleton of a bot that you can modify.
