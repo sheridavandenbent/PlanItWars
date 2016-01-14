@@ -1,61 +1,66 @@
 #!/usr/bin/env python
-"""
-EmptyBot - a skeleton of a bot that you can modify.
-Over-commented for educational purposes.
-"""
 
-# Import the PlanetWars class from the PlanetWars module. (The planet class here is not necessary
-# You can use the planet class to get specific information about a particular planet
+"""
+HillclimberBot - a slightly smarter bot based on BullyBot. The bot searches for the best planet to attack, and attacks
+with its strongest fleet. The best planet to attack is based on a combination of the amount of ships on the planet, and
+the rate in which the planet builds new ships.
+"""
+# Import the PlanetWars class from the PlanetWars module.
 from PlanetWarsAPI import PlanetWars
 
 
 def do_turn(pw):
-    """
-    Function that gets called every turn.
-    This is where to implement the strategies.
-
-    Notice that a PlanetWars object called pw is passed as a parameter which you could use
-    if you want to know what this object does, then read the API.
-
-    The next line is to tell PyCharm what kind of object pw is (A PlanetWars object here)
-    :type pw: PlanetWars
-    """
+    """:type pw: PlanetWars"""
 
     # The source variable will contain the planet from which we send the ships.
-    # Create a source planet, if you want to know what this object does, then read the API
     source = None
 
     # The dest variable will contain the destination, the planet to which we send the ships.
-    destination = None
+    possible_destinations = []
 
-    # (1) Implement an algorithm to determine the source planet to send your ships from
-    # ... actual code here
-    source = pw.my_planets()[0]
+    # (1) Find my strongest planet
+    # (1.1) Create a list of my planets with their number of ships as score, in the following form
+    # [(score, planet), ... , (score, planet)]
+    planet_scores = [(p.number_ships(), p) for p in pw.my_planets()]
+    # (1.2) Get the item with maximum first argument (the score) and catch the result
+    score, source = max(planet_scores)
 
-    # (2) Implement an algorithm to determine the destination planet to send your ships to
-    # ... actual code here
-    destination = pw.not_my_planets()[0]
+    # (2) Find the weakest enemy or neutral planet (lowest score).
+    # (2.1) Create a list of planets that are not mine with their number of ships as score, in the following form
+    # [(score, planet), ... , (score, planet)]
+    planet_scores = [(p.growth_rate(), p) for p in pw.not_my_planets()]
+    # (2.2) sorts the planets on their growth size
+    planet_scores.sort(reverse=True)
+    if len(planet_scores) < 3:
+        score, destination = max(planet_scores)
+    else:
+        for i in range(0, int(len(planet_scores)/2)):
+            possible_destinations.append(planet_scores[i][1])
+        planet_ships = [(p.number_ships(),p) for p in pw.not_my_planets()]
+        planet_ships.sort()
+        for i in range(0, len(planet_ships)):
+            if planet_ships[i][1] in possible_destinations:
+                destination = planet_ships[i][1]
+                break
 
-    # (3) Attack/Defend
-    # If the source and destination variables contain actual planets, then
-    # send half of the ships from source to destination.
+
+    # (3) Attack.
+    # If the source and dest variables contain actual planets, then
+    # send half of the ships from source to dest.
     if source is not None and destination is not None:
         pw.issue_order(source, destination)
 
 
+# Don't change from this point on. Also not necessary to understand all the details.
+# Machinery that reads the status of the game and puts it into PlanetWars.
+# It calls do_turn.
 def main():
     while True:
-        # get the new state of the game
         pw = PlanetWars()
-
-        # make a turn (your code)
         do_turn(pw)
-
-        # finish the turn
         pw.finish_turn()
 
 
-# If this is the main program -> execute main, catch Ctrl-C if pressed
 if __name__ == '__main__':
     try:
         main()
