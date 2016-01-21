@@ -1,6 +1,3 @@
-#Freke is de beste van de wereld
-#kanaries zijn geel
-Variabele356=211
 #!/usr/bin/env python
 """
 EmptyBot - a skeleton of a bot that you can modify.
