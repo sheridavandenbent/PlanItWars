@@ -24,83 +24,67 @@ def do_turn(pw):
     """
 
     try:
-
         # We try to simulate each possible action and its outcome after two turns
         # considering each of my planets as a possible source
         # and each enemy planet as a possible destination.
         score = -1
-
         best_option = simulate_actions(pw, 3, 0)
-
-        print best_option
-
         source = best_option[1]
         dest = best_option[2]
+
 
         # (3) Attack.
         # If the source and dest variables contain actual planets, then
         # send half of the ships from source to dest.
         if source is not None and dest is not None:
             pw.issue_order(source, dest)
+        else:
+            source_score = -100000
+            dest_score = 100000
+
+            for p in pw.planets():
+                if p.owner() == 1:
+                    score_max = p.number_ships()
+                    if score_max > source_score:
+                        source_score = score_max
+                        source = p
+                else:
+                    score_min = p.number_ships()
+                    if score_min < dest_score:
+                        dest_score = score_min
+                        dest = p
+            pw.issue_order(source, dest)
     except Exception, e:
         pw.log(e.message, e.__doc__)
 
-def simulate_actions(pw_state, old_i, old_count):
-    i = old_i
-    count = old_count
-    new_pw_state = SimulatedPlanetWars(pw_state)
-    try:
-        total_scores = []
-        if count%2 == 0:
-            for my_planet in new_pw_state.my_planets():
-                # Skip planets with only one ship
-                if my_planet.number_ships() <= 1:
-                    continue
+def simulate_actions(old_pw_state, i, count):
+    score_max = -1.0
+    source = None
+    dest = None
 
-                for not_my_planet in new_pw_state.not_my_planets():
-                    new_pw_state.simulate_attack(my_planet, not_my_planet)
-                    new_pw_state.simulate_growth()
-                    if i > 0:
-                        total_scores.append([simulate_actions(new_pw_state, (i-1), (count+1)), my_planet, not_my_planet])
-                    else:
-                        total_scores.append(new_pw_state.evaluate_state())
+    for my_planet in old_pw_state.my_planets():
+        # Skip planets with only one ship
+        if my_planet.number_ships() <= 1:
+            continue
+        for not_my_planet in old_pw_state.not_my_planets():
+            new_pw_state = SimulatedPlanetWars(old_pw_state)
+            new_pw_state.simulate_attack(my_planet, not_my_planet)
+            new_pw_state.simulate_growth()
+            new_pw_state.simulate_bullybot()
+            new_pw_state.simulate_growth()
+
             if i > 0:
-                score, source_planet, destination = max(total_scores)
+                new_score = simulate_actions(new_pw_state, (i-1), (count+1))
             else:
-                score = max(total_scores)
-            print "max"
-            print total_scores
-            print max(total_scores)
-        else:
-            not_enemy_planets = new_pw_state.my_planets()
-            not_enemy_planets.extend(new_pw_state.neutral_planets())
-            for enemy_planet in new_pw_state.enemy_planets():
-                # Skip planets with only one ship
-                if enemy_planet.number_ships() <= 1:
-                    continue
-                for my_planet in not_enemy_planets:
-                    new_pw_state.simulate_attack(enemy_planet, my_planet)
-                    new_pw_state.simulate_growth()
-                    if i > 0:
-                        total_scores.append([simulate_actions(new_pw_state, (i-1), (count+1)), enemy_planet, my_planet])
-                    else:
-                        total_scores.append(new_pw_state.evaluate_state())
-            if i > 0:
-                score, source_planet, destination = min(total_scores)
-            else:
-                score = min(total_scores)
-            print "min"
-            print total_scores
-            print min(total_scores)
-        if i == 3:
-            return [score, source_planet, destination]
-        else:
-            return score
-
-
-    except Exception, e:
-        new_pw_state.log(e.message, e.__doc__)
-
+                new_score = new_pw_state.evaluate_state()
+            if new_score > score_max:
+                score_max = new_score
+                source = my_planet
+                dest = not_my_planet
+    if count == 0:
+        print source
+        return [score_max, source, dest]
+    return score_max
 
 class SimulatedPlanetWars(PlanetWars):
     """
@@ -172,43 +156,51 @@ class SimulatedPlanetWars(PlanetWars):
         This is basically the code in Bullybot.py, except for one key difference:
         it only acts on the simulated game state.
         """
-        # (1) Find my strongest planet
-        # (1.1) Create a list of my planets with their number of ships as score, in the following form
-        # [(score, planet), ... , (score, planet)]
-        planet_scores = [(p.number_ships(), p) for p in self.my_planets()]
-        # (1.2) Get the item with maximum first argument (the score) and catch the result
-        score, source = max(planet_scores)
+        source = None
+        dest = None
 
-        # (2) Find the weakest enemy or neutral planet (lowest score).
-        # (2.1) Create a list of planets that are not mine with their number of ships as score, in the following form
-        # [(score, planet), ... , (score, planet)]
-        planet_scores = [(p.number_ships(), p) for p in self.not_my_planets()]
-        # (2.2) Get the item with maximum first argument (the score) and catch the result
-        score, destination = min(planet_scores)
+        source_score = -100000
+        dest_score = 100000
 
-        # (3) Attack.
-        # If the source and dest variables contain actual planets, then
-        # send half of the ships from source to dest.
-        if source is not None and destination is not None:
-            self.simulate_attack(source, destination)
+        for p in self.planets():
+            # self.log("Planet(ships:%d, owner:%d)" % (p.number_ships(), p.owner()))
+            if p.is_enemy():
+                if p.number_ships() <= 1:
+                    continue
+
+                score_max = p.number_ships()
+                if score_max > source_score:
+                    source_score = score_max
+                    source = p
+            else:
+                score_min = p.number_ships()
+                if score_min < dest_score:
+                    dest_score = score_min
+                    dest = p
+
+        if source is not None and dest is not None:
+            self.simulate_attack(source, dest)
 
     def evaluate_state(self):
-        """
-        Evaluates how promising a simulated state is.
 
-        CHANGE HERE:
-        Currently it computes the total number of my ships/total number of enemy ships.
-        This means that the biggest the proportion of my ships,
-        the highest the score of the evaluated state.
-        You can change it to anything that makes sense, using combinations
-        of number of planets, ships or growth rate.
-        Returns score of the final state of the simulation
-        """
+        try:
+            my_ships = (1.0 + sum(p.number_ships() for p in self.my_planets()))
+            enemy_ships = (1.0 + sum(p.number_ships() for p in self.enemy_planets()))
+            ship_score = my_ships / enemy_ships
 
-        my_ships = (1.0 + sum(p.number_ships() for p in self.my_planets()))
-        enemy_ships = (1.0 + sum(p.number_ships() for p in self.enemy_planets()))
+            my_growth_rate = (1.0 + sum(p.growth_rate() for p in self.my_planets()))
+            enemy_growth_rate = (1.0 + sum(p.growth_rate() for p in self.enemy_planets()))
+            growth_score = my_growth_rate / enemy_growth_rate
 
-        return my_ships / enemy_ships
+            my_planets = (1.0 + sum(1.0 for p in self.my_planets()))
+            enemy_planets = (1.0 + sum(1.0 for p in self.enemy_planets()))
+            planet_score = my_planets / enemy_planets
+
+            total_score = ship_score + (5 * growth_score) + (2 * planet_score)
+            return total_score
+
+        except Exception, e:
+            print (e.message, e.__doc__)
 
 
 def main():
