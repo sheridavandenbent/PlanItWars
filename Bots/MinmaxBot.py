@@ -15,6 +15,7 @@ Try to improve this bot. For example, you can try to answer some of this questio
 """
 # Import the PlanetWars class from the PlanetWars module.
 from PlanetWarsAPI import PlanetWars, Planet
+import math
 
 
 def do_turn(pw):
@@ -28,6 +29,7 @@ def do_turn(pw):
         # considering each of my planets as a possible source
         # and each enemy planet as a possible destination.
         score = -1
+        print "spreek functie aan"
         best_option = simulate_actions(pw, 3, 0)
         source = best_option[1]
         dest = best_option[2]
@@ -58,6 +60,7 @@ def do_turn(pw):
         pw.log(e.message, e.__doc__)
 
 def simulate_actions(old_pw_state, i, count):
+    print "start function"
     score_max = -1.0
     source = None
     dest = None
@@ -196,7 +199,8 @@ class SimulatedPlanetWars(PlanetWars):
             enemy_planets = (1.0 + sum(1.0 for p in self.enemy_planets()))
             planet_score = my_planets / enemy_planets
 
-            total_score = ship_score + (5 * growth_score) + (2 * planet_score)
+            total_score = (10.0 / (1.0 + 1 * math.exp((-10 * (growth_score - 1))) + 5 * ship_score))
+
             return total_score
 
         except Exception, e:
