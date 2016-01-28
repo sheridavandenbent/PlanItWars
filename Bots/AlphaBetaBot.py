@@ -79,7 +79,6 @@ def simulate_actions(old_pw_state, i, count, alpha, beta):
         return score_max
     else:
         # MIN (their turn)
-        print "MIN turn"
         for enemy_planet in old_pw_state.enemy_planets():
             if enemy_planet.number_ships() > strongest_num_ships:
                 strongest_planet = enemy_planet
