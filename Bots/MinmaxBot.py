@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 
+"""
+Authors: Sherida van den Bent, Freke van Dijk, Golda Italiaander
+"""
 
 # Import the PlanetWars class from the PlanetWars module.
 from PlanetWarsAPI import PlanetWars, Planet
 
 
 def do_turn(pw):
-    """
-    This is the main function, here we make the decision what to do.
-    :type pw: PlanetWars
-    """
+
 
     try:
         best_option = simulate_actions(pw, 3, 0)
         source = best_option[1]
         dest = best_option[2]
-
 
         # Attack.
         if source is not None and dest is not None:
@@ -37,7 +36,7 @@ def do_turn(pw):
                         dest = p
             pw.issue_order(source, dest)
     except Exception, e:
-        pw.log(e.message, e.__doc__)
+        print(e.message, e.__doc__)
 
 def simulate_actions(old_pw_state, i, count):
     score_max = -1.0
@@ -45,11 +44,14 @@ def simulate_actions(old_pw_state, i, count):
     source = None
     dest = None
     strongest_num_ships = -1
+    strongest_planet = None
 
     for my_planet in old_pw_state.my_planets():
         if my_planet.number_ships() > strongest_num_ships:
             strongest_planet = my_planet
             strongest_num_ships = my_planet.number_ships()
+    if strongest_planet == None:
+        return -1
     for not_my_planet in old_pw_state.not_my_planets():
         new_pw_state = SimulatedPlanetWars(old_pw_state)
         new_pw_state.simulate_attack(strongest_planet, not_my_planet)

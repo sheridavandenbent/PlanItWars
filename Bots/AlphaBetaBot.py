@@ -1,21 +1,18 @@
 #!/usr/bin/env python
 
+"""
+Authors: Sherida van den Bent, Freke van Dijk, Golda Italiaander
+"""
 
 # Import the PlanetWars class from the PlanetWars module.
 from PlanetWarsAPI import PlanetWars, Planet
 
 def do_turn(pw):
-    """
-    This is the main function, here we make the decision what to do.
-    :type pw: PlanetWars
-    """
 
     try:
         best_option = simulate_actions(pw, 3, 0, 0.0, 0.0)
         source = best_option[1]
         dest = best_option[2]
-
-        # (3) Attack.
 
         if source is not None and dest is not None:
             pw.issue_order(source, dest)
